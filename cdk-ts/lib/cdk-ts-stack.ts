@@ -13,19 +13,14 @@ export class CdkTsStackTask2 extends cdk.Stack {
     // Create an S3 bucket
     const bucket = new s3.Bucket(this, 'MyReactAppBucket', {
       websiteIndexDocument: 'index.html',
-       blockPublicAccess: new s3.BlockPublicAccess({
-        blockPublicAcls: false,
-        blockPublicPolicy: false,
-        ignorePublicAcls: false,
-        restrictPublicBuckets: false,
-      }),
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
      bucket.addToResourcePolicy(new cdk.aws_iam.PolicyStatement({
       actions: ['s3:GetObject'],
       resources: [`${bucket.bucketArn}/*`],
-      principals: [new cdk.aws_iam.AnyPrincipal()],
+      principals: [new cdk.aws_iam.ServicePrincipal('cloudfront.amazonaws.com')],
     }));
 
 
