@@ -9,6 +9,7 @@ export class StackCSKTask2 extends cdk.Stack {
     // Create an S3 bucket
     const bucket = new s3.Bucket(this, 'MyReactAppBucket', {
       websiteIndexDocument: 'index.html',
+      autoDeleteObjects: true,
       blockPublicAccess: s3.BlockPublicAccess.BLOCK_ALL,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
