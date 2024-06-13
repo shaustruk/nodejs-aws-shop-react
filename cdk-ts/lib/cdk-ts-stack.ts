@@ -1,15 +1,11 @@
 import * as cdk from 'aws-cdk-lib';
+import { aws_cloudfront as cloudfront, aws_s3 as s3, aws_iam as iam, aws_s3_deployment as s3deploy } from 'aws-cdk-lib';
 import { Construct } from 'constructs';
-import * as s3 from 'aws-cdk-lib/aws-s3';
-import * as s3deploy from 'aws-cdk-lib/aws-s3-deployment';
-import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
-import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
-import { BlockPublicAccess } from 'aws-cdk-lib/aws-s3';
 
-export class CdkTsStackTask2 extends cdk.Stack {
+export class StackCSKTask2 extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
-
+    const OAI = new cloudfront.OriginAccessIdentity(this, 'react-app-OAI')
     // Create an S3 bucket
     const bucket = new s3.Bucket(this, 'MyReactAppBucket', {
       websiteIndexDocument: 'index.html',
@@ -17,17 +13,31 @@ export class CdkTsStackTask2 extends cdk.Stack {
       removalPolicy: cdk.RemovalPolicy.DESTROY,
     });
 
-     bucket.addToResourcePolicy(new cdk.aws_iam.PolicyStatement({
+    bucket.addToResourcePolicy(new iam.PolicyStatement({
       actions: ['s3:GetObject'],
-      resources: [`${bucket.bucketArn}/*`],
-      principals: [new cdk.aws_iam.ServicePrincipal('cloudfront.amazonaws.com')],
+      resources: [bucket.arnForObjects('*')],
+      principals: [new iam.CanonicalUserPrincipal(OAI.cloudFrontOriginAccessIdentityS3CanonicalUserId)],
+
+      effect: iam.Effect.ALLOW,
+      conditions: {
+        StringEquals: {
+          'AWS:SourceArn': `arn:aws:cloudfront::${this.account}:distribution/*`
+        }
+      }
     }));
 
-
-    const distribution = new cloudfront.Distribution(this, 'MyReactAppDistribution', {
-      defaultBehavior: { origin: new origins.S3Origin(bucket) },
-      defaultRootObject: 'index.html',
+    const distribution = new cloudfront.CloudFrontWebDistribution(this, 'MyReactAppDistribution', {
+      originConfigs: [{
+        s3OriginSource: {
+          s3BucketSource: bucket,
+          originAccessIdentity: OAI,
+        },
+        behaviors: [{
+          isDefaultBehavior: true,
+        }]
+      }],
     });
+
 
     new s3deploy.BucketDeployment(this, 'DeployReactApp', {
       sources: [s3deploy.Source.asset('../dist')],
